@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="it" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Menù Frigo Smart • Piano Alimentare</title>
+  
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857'
+            }
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Phosphor Icons for clean culinary aesthetics -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+  <style>
+    /* Prevent pull-to-refresh on mobile browsers for an app-like feel */
+    body {
+      overscroll-behavior-y: none;
+      -webkit-tap-highlight-color: transparent;
+      font-family: 'Inter', sans-serif;
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    /* Smooth transitions */
+    .fade-in {
+      animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-full flex flex-col antialiased transition-colors duration-200">
+
+  <header class="sticky top-0 z-30 bg-white/85 dark:bg-slate-900/85 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 px-4 py-3 shadow-xs">
+    <div class="max-w-xl mx-auto flex items-center justify-between gap-3">
+      
+      <!-- App Brand & Today Pill -->
+      <div class="flex items-center gap-2">
+        <div class="w-9 h-9 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-lg">
+          <i class="ph-bold ph-fork-knife"></i>
+        </div>
+        <div>
+          <h1 class="text-sm font-bold tracking-tight leading-tight flex items-center gap-1.5">
+            Menù Frigo
+            <span class="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">Oggi</span>
+          </h1>
+          <p id="current-date-caption" class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Caricamento data...</p>
+        </div>
+      </div>
+
+      <!-- Action Buttons (Dark mode & Settings) -->
+      <div class="flex items-center gap-1">
+        <button id="theme-toggle-btn" aria-label="Cambia tema" class="p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+          <i class="ph-bold ph-sun text-lg dark:hidden"></i>
+          <i class="ph-bold ph-moon text-lg hidden dark:block"></i>
+        </button>
+
+        <button id="open-settings-btn" aria-label="Impostazioni ed modifica menù" class="p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+          <i class="ph-bold ph-gear-six text-lg"></i>
+        </button>
+      </div>
+
+    </div>
+
+    <div class="max-w-xl mx-auto mt-2.5">
+      <div class="bg-slate-200/70 dark:bg-slate-800/80 p-1 rounded-2xl flex items-center relative select-none">
+        <button id="profile-btn-p1" class="flex-1 py-2 text-xs sm:text-sm font-semibold rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+          <span id="profile-label-p1">Lui</span>
+        </button>
+        <button id="profile-btn-p2" class="flex-1 py-2 text-xs sm:text-sm font-semibold rounded-xl transition-all duration-200 flex items-center justify-center gap-2 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200">
+          <span class="w-2 h-2 rounded-full bg-transparent inline-block"></span>
+          <span id="profile-label-p2">Lei</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <nav class="sticky top-[108px] z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200/60 dark:border-slate-800/80 py-2.5">
+    <div class="max-w-xl mx-auto px-3">
+      <div id="days-strip" class="flex items-center justify-between gap-1 sm:gap-2 overflow-x-auto no-scrollbar py-0.5">
+        <!-- Generated Dynamically via JS (Lun, Mar, Mer, Gio, Ven, Sab, Dom) -->
+      </div>
+    </div>
+  </nav>
+
+  <main class="flex-1 max-w-xl w-full mx-auto p-4 space-y-3.5 pb-20">
+    
+    <!-- Info bar with Quick "Return to Today" button -->
+    <div class="flex items-center justify-between px-1">
+      <div class="flex items-center gap-2">
+        <h2 id="active-day-title" class="text-lg font-bold tracking-tight text-slate-900 dark:text-slate-50">Lunedì</h2>
+        <span id="badge-is-today" class="text-[11px] font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 px-2 py-0.5 rounded-md hidden">OGGI</span>
+      </div>
+      <button id="jump-today-btn" class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1">
+        <i class="ph-bold ph-arrow-u-up-left"></i>
+        Torna ad oggi
+      </button>
+    </div>
+
+    <!-- Container for dynamic meal cards -->
+    <div id="meals-container" class="space-y-3">
+      <!-- Populated via renderMeals() -->
+    </div>
+
+  </main>
+
+  <div id="edit-modal" class="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 hidden transition-opacity">
+    <div class="bg-white dark:bg-slate-900 w-full max-w-lg rounded-t-3xl sm:rounded-2xl max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+      
+      <!-- Modal Header -->
+      <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+        <div>
+          <h3 class="font-bold text-base text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <i class="ph-bold ph-pencil-simple text-emerald-600 dark:text-emerald-400"></i>
+            Modifica Pasti
+          </h3>
+          <p id="modal-subtitle" class="text-xs text-slate-500">Lui • Lunedì</p>
+        </div>
+        <button id="close-modal-btn" class="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+          <i class="ph-bold ph-x text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body (Inputs) -->
+      <form id="edit-meal-form" class="p-5 overflow-y-auto space-y-4 text-sm">
+        
+        <div>
+          <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+            <i class="ph-bold ph-coffee text-amber-500"></i> Colazione
+          </label>
+          <textarea id="edit-colazione" rows="2" class="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+            <i class="ph-bold ph-apple text-lime-500"></i> Spuntino Mattina
+          </label>
+          <textarea id="edit-spuntino" rows="2" class="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+            <i class="ph-bold ph-cooking-pot text-orange-500"></i> Pranzo
+          </label>
+          <textarea id="edit-pranzo" rows="2" class="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+            <i class="ph-bold ph-cookie text-pink-500"></i> Merenda Pomeriggio
+          </label>
+          <textarea id="edit-merenda" rows="2" class="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+            <i class="ph-bold ph-moon-stars text-indigo-500"></i> Cena
+          </label>
+          <textarea id="edit-cena" rows="2" class="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
+        </div>
+
+        <!-- Submit actions -->
+        <div class="pt-2 flex items-center gap-2">
+          <button type="button" id="cancel-modal-btn" class="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-xs">
+            Annulla
+          </button>
+          <button type="submit" class="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-sm flex items-center justify-center gap-1.5">
+            <i class="ph-bold ph-check"></i> Salva Modifiche
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <div id="settings-modal" class="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
+    <div class="bg-white dark:bg-slate-900 w-full max-w-lg rounded-t-3xl sm:rounded-2xl max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+      
+      <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+        <h3 class="font-bold text-base text-slate-900 dark:text-slate-100 flex items-center gap-2">
+          <i class="ph-bold ph-sliders text-emerald-600"></i> Impostazioni Menù
+        </h3>
+        <button id="close-settings-btn" class="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+          <i class="ph-bold ph-x text-lg"></i>
+        </button>
+      </div>
+
+      <div class="p-5 overflow-y-auto space-y-5 text-sm">
+        <!-- Edit Profile Names -->
+        <div class="space-y-3">
+          <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Nomi Profili</h4>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-slate-500 mb-1">Profilo 1</label>
+              <input type="text" id="input-name-p1" class="w-full p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-500 mb-1">Profilo 2</label>
+              <input type="text" id="input-name-p2" class="w-full p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs">
+            </div>
+          </div>
+          <button id="save-names-btn" class="w-full py-2 bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white rounded-xl text-xs font-semibold">
+            Aggiorna Nomi
+          </button>
+        </div>
+
+        <hr class="border-slate-200 dark:border-slate-800">
+
+        <!-- Export / Import / Reset -->
+        <div class="space-y-2.5">
+          <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Backup & Dati</h4>
+          <div class="flex gap-2">
+            <button id="export-json-btn" class="flex-1 py-2 px-3 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center gap-1.5">
+              <i class="ph-bold ph-export"></i> Esporta Dati
+            </button>
+            <label class="flex-1 py-2 px-3 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center gap-1.5 cursor-pointer text-center">
+              <i class="ph-bold ph-download-simple"></i> Importa
+              <input type="file" id="import-json-file" accept=".json" class="hidden">
+            </label>
+          </div>
+          <button id="reset-default-btn" class="w-full py-2 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl text-xs font-medium transition">
+            Ripristina Menù Esempio Predefinito
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div id="toast-box" class="fixed bottom-4 left-1/2 -translate-x-1/2 bg-slate-900 text-white dark:bg-white dark:text-slate-900 px-4 py-2.5 rounded-2xl shadow-xl text-xs font-semibold flex items-center gap-2 opacity-0 pointer-events-none transition-all duration-300 z-50">
+    <i class="ph-fill ph-check-circle text-emerald-500 text-base"></i>
+    <span id="toast-message">Operazione completata</span>
+  </div>
+
+  <script>
+    // Days mapping (1 = Monday, 7 = Sunday)
+    const DAYS = [
+      { id: 1, short: 'Lun', name: 'Lunedì' },
+      { id: 2, short: 'Mar', name: 'Martedì' },
+      { id: 3, short: 'Mer', name: 'Mercoledì' },
+      { id: 4, short: 'Gio', name: 'Giovedì' },
+      { id: 5, short: 'Ven', name: 'Venerdì' },
+      { id: 6, short: 'Sab', name: 'Sabato' },
+      { id: 7, short: 'Dom', name: 'Domenica' }
+    ];
+
+    // Default balanced nutritional menus for Lui and Lei
+    const DEFAULT_MENUS = {
+      p1: {
+        1: {
+          colazione: "Porridge d'avena (60g) con latte scremato, semi di chia e 1 mela",
+          spuntino: "1 banana + 20g mandorle tostate",
+          pranzo: "Pasta integrale (90g) con tonno naturale, pomodorini e rucola",
+          merenda: "Yogurt greco 0% (150g) con mirtilli",
+          cena: "Petto di pollo alla piastra (200g) con zucchine trifolate e pane di segale (50g)"
+        },
+        2: {
+          colazione: "Pancake proteici (albumi + avena) con filo di miele e caffè",
+          spuntino: "1 mela + noci (20g)",
+          pranzo: "Riso basmati (90g) con petto di tacchino al curry e fagiolini al vapore",
+          merenda: "1 barretta proteica o shake proteico",
+          cena: "Trancio di salmone al forno (200g) con patate dolci (150g) e spinaci"
+        },
+        3: {
+          colazione: "3 fette biscottate integrali con marmellata senza zuccheri + uovo sodo",
+          spuntino: "Yogurt greco magro con semi di girasole",
+          pranzo: "Farro perlato (90g) con ceci, pomodorini secchi e olive",
+          merenda: "Frutta fresca di stagione + 15g anacardi",
+          cena: "Bistecca di vitello magra (180g) con insalata mista e olio EVO a crudo"
+        },
+        4: {
+          colazione: "Porridge d'avena al cacao amaro con banana a rondelle",
+          spuntino: "2 gallette di riso con burro d'arachidi 100%",
+          pranzo: "Gnocchi di patate (150g) con passata di pomodoro e ricotta magra (60g)",
+          merenda: "Kefir da bere o 1 frutto fresco",
+          cena: "Filetti di merluzzo al pomodoro e capperi con cavolfiore gratinato"
+        },
+        5: {
+          colazione: "Toast integrale con uovo in camicia e pomodoro a fette",
+          spuntino: "Spicchi di mela con cannella",
+          pranzo: "Couscous integrale con verdure saltate e straccetti di manzo (120g)",
+          merenda: "Yogurt greco 0% con granella di mandorle",
+          cena: "Omelette di 3 uova con asparagi + insalata mista e 1 panino integrale"
+        },
+        6: {
+          colazione: "Smoothie bowl con frutti di bosco, fiocchi d'avena e semi di lino",
+          spuntino: "1 arancia o spremuta fresca",
+          pranzo: "Risotto allo zafferano e funghi con spolverata di parmigiano",
+          merenda: "Una manciata di noci (25g)",
+          cena: "Pizza margherita artigianale (serata libera controllata) + rucola"
+        },
+        7: {
+          colazione: "Waffle d'avena con frutti rossi e yogurt bianco",
+          spuntino: "Frutta secca mista (20g)",
+          pranzo: "Pranzo in famiglia: Pollo arrosto al forno senza pelle con patate novelle",
+          merenda: "Tè verde con biscotto d'avena integrale",
+          cena: "Vellutata di zucca e carote con crostini di segale e fiocchi di latte"
+        }
+      },
+      p2: {
+        1: {
+          colazione: "Yogurt greco 0% (150g) con frutti rossi, 30g muesli senza zuccheri e tè verde",
+          spuntino: "1 mela Fuji tagliata a fettine",
+          pranzo: "Quinoa con gamberetti (120g), carote a julienne e crema di zucchine",
+          merenda: "3 noci del Brasile o mandorle",
+          cena: "Trancio di orata al cartoccio con finocchi e insalata riccia"
+        },
+        2: {
+          colazione: "2 fette di pane integrale tostato con ricotta fresca e cannella",
+          spuntino: "1 pera o frutto di stagione",
+          pranzo: "Pasta di legumi (70g) con crema di broccoli e parmigiano (10g)",
+          merenda: "Yogurt bianco magro",
+          cena: "Petto di pollo alle erbe aromatiche (140g) con purè di zucca"
+        },
+        3: {
+          colazione: "Pancake d'avena leggeri (solo albumi) con marmellata d'arance amara",
+          spuntino: "10 mandorle pelate",
+          pranzo: "Insalata di riso venere (65g) con dadini di salmone affumicato e avocado",
+          merenda: "Frullato di frutti di bosco e latte di soia",
+          cena: "Torta salata di verdure leggere con base ricotta e contorno di carote cotte"
+        },
+        4: {
+          colazione: "Chia pudding preparato la sera prima con latte di mandorla e fragole",
+          spuntino: "1 spremuta d'arancia fresca",
+          pranzo: "Vellutata di piselli con crostini integrali (40g) e stracchino light (50g)",
+          merenda: "Yogurt greco con cannella",
+          cena: "Burger di soia o lenticchie fatto in casa con fagiolini e pomodorini"
+        },
+        5: {
+          colazione: "Fette wasa (2) con avocado schiacciato e goccia di limone",
+          spuntino: "1 macedonia piccola al naturale",
+          pranzo: "Insalatona mista ricca con mais, uovo sodo, tonno al naturale (80g) e cetrioli",
+          merenda: "Tè matcha o tisana + 2 quadretti cioccolato fondente 85%",
+          cena: "Calamari alla griglia con bietole al vapore e goccio d'olio extravergine"
+        },
+        6: {
+          colazione: "Mug cake d'avena e banana cotta al microonde 2 min + caffè americano",
+          spuntino: "1 pesca o frutto di stagione",
+          pranzo: "Tortellini magri in brodo vegetale o risotto leggero agli spinaci",
+          merenda: "1 vasetto di kefir",
+          cena: "Cena sfiziosa: Piadina all'olio extravergine con bresaola, rucola e scaglie"
+        },
+        7: {
+          colazione: "French toast fit con pane integrale, albume e mirtilli caldi",
+          spuntino: "Pistacchi non salati (15g)",
+          pranzo: "Pranzo domenicale: Tagliata di manzo con insalata di carciofi crudi e grana",
+          merenda: "Tisana rilassante finocchio o mela e cannella",
+          cena: "Crema tiepida di carote e zenzero con tofu dorato o ricotta fresca"
+        }
+      }
+    };
+
+    let appData = {
+      profiles: {
+        p1: 'Lui',
+        p2: 'Lei'
+      },
+      currentProfile: 'p1', // 'p1' or 'p2'
+      selectedDay: 1,       // 1 (Lun) to 7 (Dom)
+      todayDay: 1,          // Calculated at boot
+      menus: null
+    };
+
+    // Safe LocalStorage helpers
+    function loadState() {
+      try {
+        const savedMenus = localStorage.getItem('diet_frigo_menus');
+        appData.menus = savedMenus ? JSON.parse(savedMenus) : JSON.parse(JSON.stringify(DEFAULT_MENUS));
+        
+        const savedProfiles = localStorage.getItem('diet_frigo_profiles');
+        if (savedProfiles) {
+          appData.profiles = JSON.parse(savedProfiles);
+        }
+
+        const savedCurrentProfile = localStorage.getItem('diet_frigo_active_profile');
+        if (savedCurrentProfile && (savedCurrentProfile === 'p1' || savedCurrentProfile === 'p2')) {
+          appData.currentProfile = savedCurrentProfile;
+        }
+
+        const savedTheme = localStorage.getItem('diet_frigo_theme');
+        if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      } catch (e) {
+        console.error("Errore caricamento dati:", e);
+        appData.menus = JSON.parse(JSON.stringify(DEFAULT_MENUS));
+      }
+    }
+
+    function saveMenus() {
+      try {
+        localStorage.setItem('diet_frigo_menus', JSON.stringify(appData.menus));
+      } catch(e) {
+        console.error("Errore salvataggio menù:", e);
+      }
+    }
+
+    function saveProfiles() {
+      try {
+        localStorage.setItem('diet_frigo_profiles', JSON.stringify(appData.profiles));
+        localStorage.setItem('diet_frigo_active_profile', appData.currentProfile);
+      } catch(e) {
+        console.error("Errore salvataggio profili:", e);
+      }
+    }
+
+    // Identify current real-world weekday
+    function computeToday() {
+      const jsDay = new Date().getDay(); // 0 = Dom, 1 = Lun, ... 6 = Sab
+      // Map JS day to our format: Lun=1, Mar=2, ..., Dom=7
+      return jsDay === 0 ? 7 : jsDay;
+    }
+
+    function getTodayFormattedDate() {
+      const now = new Date();
+      const options = { weekday: 'long', day: 'numeric', month: 'long' };
+      const formatted = now.toLocaleDateString('it-IT', options);
+      // Capitalize first letter
+      return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+    }
+
+    function showToast(msg) {
+      const box = document.getElementById('toast-box');
+      const text = document.getElementById('toast-message');
+      text.innerText = msg;
+      box.classList.remove('opacity-0', 'pointer-events-none');
+      box.classList.add('opacity-100');
+      setTimeout(() => {
+        box.classList.add('opacity-0', 'pointer-events-none');
+        box.classList.remove('opacity-100');
+      }, 2300);
+    }
+
+    function renderDayStrip() {
+      const strip = document.getElementById('days-strip');
+      strip.innerHTML = '';
+
+      DAYS.forEach(day => {
+        const isSelected = day.id === appData.selectedDay;
+        const isToday = day.id === appData.todayDay;
+
+        const btn = document.createElement('button');
+        btn.setAttribute('data-day', day.id);
+        btn.className = `flex flex-col items-center justify-center flex-1 min-w-[42px] py-1.5 px-1 rounded-xl transition-all select-none relative ${
+          isSelected
+            ? 'bg-emerald-600 text-white shadow-sm font-bold scale-[1.03]'
+            : 'bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 font-medium'
+        }`;
+
+        // Today pill dot
+        const todayDot = isToday
+          ? `<span class="w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-emerald-500'} absolute top-1 right-1"></span>`
+          : '';
+
+        btn.innerHTML = `
+          ${todayDot}
+          <span class="text-[11px] leading-none uppercase tracking-tighter">${day.short}</span>
+          <span class="text-[10px] opacity-75 mt-0.5 leading-none">${day.id === appData.todayDay ? 'Oggi' : ''}</span>
+        `;
+
+        btn.addEventListener('click', () => {
+          appData.selectedDay = day.id;
+          renderDayStrip();
+          renderMeals();
+        });
+
+        strip.appendChild(btn);
+      });
+
+      // Update active day title & today badge
+      const activeObj = DAYS.find(d => d.id === appData.selectedDay);
+      document.getElementById('active-day-title').textContent = activeObj ? activeObj.name : '';
+      const isViewingToday = appData.selectedDay === appData.todayDay;
+      const todayBadge = document.getElementById('badge-is-today');
+      if (isViewingToday) {
+        todayBadge.classList.remove('hidden');
+      } else {
+        todayBadge.classList.add('hidden');
+      }
+    }
+
+    function renderMeals() {
+      const container = document.getElementById('meals-container');
+      container.innerHTML = '';
+
+      const dayMeals = appData.menus[appData.currentProfile]?.[appData.selectedDay] || {
+        colazione: "Nessun dato inserito",
+        spuntino: "Nessun dato inserito",
+        pranzo: "Nessun dato inserito",
+        merenda: "Nessun dato inserito",
+        cena: "Nessun dato inserito"
+      };
+
+      const mealDefs = [
+        { key: 'colazione', label: 'Colazione', icon: 'ph-coffee', color: 'amber', bg: 'bg-amber-500/10 text-amber-600 dark:text-amber-400' },
+        { key: 'spuntino', label: 'Spuntino Mattina', icon: 'ph-apple', color: 'lime', bg: 'bg-lime-500/10 text-lime-600 dark:text-lime-400' },
+        { key: 'pranzo', label: 'Pranzo', icon: 'ph-cooking-pot', color: 'orange', bg: 'bg-orange-500/10 text-orange-600 dark:text-orange-400' },
+        { key: 'merenda', label: 'Merenda Pomeriggio', icon: 'ph-cookie', color: 'pink', bg: 'bg-pink-500/10 text-pink-600 dark:text-pink-400' },
+        { key: 'cena', label: 'Cena', icon: 'ph-moon-stars', color: 'indigo', bg: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400' }
+      ];
+
+      mealDefs.forEach(m => {
+        const text = dayMeals[m.key] || 'Non specificato';
+        
+        const card = document.createElement('div');
+        card.className = "fade-in bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800/90 rounded-2xl p-4 shadow-xs flex flex-col justify-between transition-all hover:border-emerald-500/30";
+
+        card.innerHTML = `
+          <div class="flex items-start justify-between gap-3 mb-1.5">
+            <div class="flex items-center gap-2">
+              <div class="w-7 h-7 rounded-lg ${m.bg} flex items-center justify-center text-base">
+                <i class="ph-bold ${m.icon}"></i>
+              </div>
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">${m.label}</span>
+            </div>
+            <button class="edit-single-meal-btn text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 p-1" title="Modifica pasto">
+              <i class="ph-bold ph-pencil-simple text-sm"></i>
+            </button>
+          </div>
+          <p class="text-slate-800 dark:text-slate-100 font-medium text-sm leading-relaxed whitespace-pre-line pl-9">
+            ${escapeHtml(text)}
+          </p>
+        `;
+
+        // Click card or edit button to open modal
+        card.querySelector('.edit-single-meal-btn').addEventListener('click', (e) => {
+          e.stopPropagation();
+          openEditModal();
+        });
+
+        container.appendChild(card);
+      });
+
+      // Add a handy edit full day button at the bottom
+      const bottomAction = document.createElement('div');
+      bottomAction.className = "pt-2 flex justify-center";
+      bottomAction.innerHTML = `
+        <button id="edit-whole-day-btn" class="w-full py-3 px-4 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 hover:border-emerald-500 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 text-xs font-semibold flex items-center justify-center gap-2 transition">
+          <i class="ph-bold ph-note-pencil text-base"></i>
+          Modifica menù di ${DAYS.find(d => d.id === appData.selectedDay).name} (${appData.profiles[appData.currentProfile]})
+        </button>
+      `;
+      bottomAction.querySelector('#edit-whole-day-btn').addEventListener('click', openEditModal);
+      container.appendChild(bottomAction);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function updateProfileUI() {
+      const p1Btn = document.getElementById('profile-btn-p1');
+      const p2Btn = document.getElementById('profile-btn-p2');
+      const p1Label = document.getElementById('profile-label-p1');
+      const p2Label = document.getElementById('profile-label-p2');
+
+      p1Label.textContent = appData.profiles.p1;
+      p2Label.textContent = appData.profiles.p2;
+
+      if (appData.currentProfile === 'p1') {
+        p1Btn.className = "flex-1 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-sm bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400";
+        p2Btn.className = "flex-1 py-2 text-xs sm:text-sm font-semibold rounded-xl transition-all duration-200 flex items-center justify-center gap-2 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200";
+        p1Btn.querySelector('span:first-child').className = "w-2 h-2 rounded-full bg-emerald-500 inline-block";
+        p2Btn.querySelector('span:first-child').className = "w-2 h-2 rounded-full bg-transparent inline-block";
+      } else {
+        p2Btn.className = "flex-1 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-sm bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400";
+        p1Btn.className = "flex-1 py-2 text-xs sm:text-sm font-semibold rounded-xl transition-all duration-200 flex items-center justify-center gap-2 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200";
+        p2Btn.querySelector('span:first-child').className = "w-2 h-2 rounded-full bg-emerald-500 inline-block";
+        p1Btn.querySelector('span:first-child').className = "w-2 h-2 rounded-full bg-transparent inline-block";
+      }
+    }
+
+    function openEditModal() {
+      const modal = document.getElementById('edit-modal');
+      const activeDay = DAYS.find(d => d.id === appData.selectedDay);
+      const profileName = appData.profiles[appData.currentProfile];
+      
+      document.getElementById('modal-subtitle').textContent = `${profileName} • ${activeDay.name}`;
+
+      const current = appData.menus[appData.currentProfile]?.[appData.selectedDay] || {};
+      document.getElementById('edit-colazione').value = current.colazione || '';
+      document.getElementById('edit-spuntino').value = current.spuntino || '';
+      document.getElementById('edit-pranzo').value = current.pranzo || '';
+      document.getElementById('edit-merenda').value = current.merenda || '';
+      document.getElementById('edit-cena').value = current.cena || '';
+
+      modal.classList.remove('hidden');
+    }
+
+    function closeEditModal() {
+      document.getElementById('edit-modal').classList.add('hidden');
+    }
+
+    function saveEditedMeals(e) {
+      e.preventDefault();
+      const prof = appData.currentProfile;
+      const day = appData.selectedDay;
+
+      if (!appData.menus[prof]) appData.menus[prof] = {};
+
+      appData.menus[prof][day] = {
+        colazione: document.getElementById('edit-colazione').value.trim(),
+        spuntino: document.getElementById('edit-spuntino').value.trim(),
+        pranzo: document.getElementById('edit-pranzo').value.trim(),
+        merenda: document.getElementById('edit-merenda').value.trim(),
+        cena: document.getElementById('edit-cena').value.trim()
+      };
+
+      saveMenus();
+      closeEditModal();
+      renderMeals();
+      showToast("Menù aggiornato con successo!");
+    }
+
+    function openSettingsModal() {
+      document.getElementById('input-name-p1').value = appData.profiles.p1;
+      document.getElementById('input-name-p2').value = appData.profiles.p2;
+      document.getElementById('settings-modal').classList.remove('hidden');
+    }
+
+    function closeSettingsModal() {
+      document.getElementById('settings-modal').classList.add('hidden');
+    }
+
+    function saveCustomNames() {
+      const n1 = document.getElementById('input-name-p1').value.trim() || 'Lui';
+      const n2 = document.getElementById('input-name-p2').value.trim() || 'Lei';
+      appData.profiles.p1 = n1;
+      appData.profiles.p2 = n2;
+      saveProfiles();
+      updateProfileUI();
+      closeSettingsModal();
+      renderMeals();
+      showToast("Nomi profili salvati!");
+    }
+
+    function toggleDarkMode() {
+      const isDark = document.documentElement.classList.toggle('dark');
+      localStorage.setItem('diet_frigo_theme', isDark ? 'dark' : 'light');
+    }
+
+    function exportBackup() {
+      const exportObject = {
+        profiles: appData.profiles,
+        menus: appData.menus,
+        exportedAt: new Date().toISOString()
+      };
+      const blob = new Blob([JSON.stringify(exportObject, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `menu-frigo-${new Date().toISOString().slice(0,10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast("Backup esportato!");
+    }
+
+    function importBackup(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          const parsed = JSON.parse(evt.target.result);
+          if (parsed.menus && parsed.profiles) {
+            appData.menus = parsed.menus;
+            appData.profiles = parsed.profiles;
+            saveMenus();
+            saveProfiles();
+            updateProfileUI();
+            renderMeals();
+            closeSettingsModal();
+            showToast("Dati importati con successo!");
+          } else {
+            showToast("Formato file non valido!");
+          }
+        } catch (err) {
+          showToast("Errore durante l'importazione!");
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    }
+
+    function resetToDefault() {
+      appData.menus = JSON.parse(JSON.stringify(DEFAULT_MENUS));
+      appData.profiles = { p1: 'Lui', p2: 'Lei' };
+      saveMenus();
+      saveProfiles();
+      updateProfileUI();
+      renderMeals();
+      closeSettingsModal();
+      showToast("Ripristinato menù di default!");
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadState();
+
+      // Compute actual current day
+      appData.todayDay = computeToday();
+      appData.selectedDay = appData.todayDay;
+
+      // Update date header caption
+      document.getElementById('current-date-caption').textContent = getTodayFormattedDate();
+
+      // Profile Switchers
+      document.getElementById('profile-btn-p1').addEventListener('click', () => {
+        appData.currentProfile = 'p1';
+        saveProfiles();
+        updateProfileUI();
+        renderMeals();
+      });
+
+      document.getElementById('profile-btn-p2').addEventListener('click', () => {
+        appData.currentProfile = 'p2';
+        saveProfiles();
+        updateProfileUI();
+        renderMeals();
+      });
+
+      // Jump to today button
+      document.getElementById('jump-today-btn').addEventListener('click', () => {
+        appData.selectedDay = appData.todayDay;
+        renderDayStrip();
+        renderMeals();
+      });
+
+      // Theme toggle
+      document.getElementById('theme-toggle-btn').addEventListener('click', toggleDarkMode);
+
+      // Settings modal toggles
+      document.getElementById('open-settings-btn').addEventListener('click', openSettingsModal);
+      document.getElementById('close-settings-btn').addEventListener('click', closeSettingsModal);
+      document.getElementById('save-names-btn').addEventListener('click', saveCustomNames);
+      document.getElementById('export-json-btn').addEventListener('click', exportBackup);
+      document.getElementById('import-json-file').addEventListener('change', importBackup);
+      document.getElementById('reset-default-btn').addEventListener('click', resetToDefault);
+
+      // Meal Edit modal
+      document.getElementById('close-modal-btn').addEventListener('click', closeEditModal);
+      document.getElementById('cancel-modal-btn').addEventListener('click', closeEditModal);
+      document.getElementById('edit-meal-form').addEventListener('submit', saveEditedMeals);
+
+      // Initial Render
+      updateProfileUI();
+      renderDayStrip();
+      renderMeals();
+    });
+  </script>
+</body>
+</html>
